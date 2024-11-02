@@ -5,68 +5,96 @@ from datetime import datetime
 app = Flask(__name__)
 api = Api(app)
 
-# Data awal tugas (total 2 contoh tugas) dengan detail lebih lengkap
+# Data awal tugas (total 10 tugas dengan detail lebih lengkap)
 tasks = {
     "1": {
-        "title": "Complete the project report",
-        "description": "Finish the final report for the project",
-        "status": "in-progress",
-        "due_date": "2024-11-10"
+        "title": "Tugas Matematika",
+        "description": "Mengerjakan soal aljabar",
+        "due_date": "2024-11-05",
+        "status": "Incomplete",
+        "priority": "High"
     },
     "2": {
-        "title": "Team meeting",
-        "description": "Discuss the project milestones with the team",
-        "status": "pending",
-        "due_date": "2024-11-12"
-    }
+        "title": "Proyek Ilmu Komputer",
+        "description": "Membuat program dengan Python",
+        "due_date": "2024-11-10",
+        "status": "Incomplete",
+        "priority": "Medium"
+    },
 }
 
-# Endpoint untuk mengelola tugas
-class Task(Resource):
-    # GET untuk mengambil data tugas berdasarkan ID
+# Kelas untuk CRUD tugas
+class TaskList(Resource):
+    def get(self):
+        return {
+            "error": False,
+            "message": "Success",
+            "count": len(tasks),
+            "tasks": tasks
+        }
+
+class TaskDetail(Resource):
     def get(self, task_id):
-        task = tasks.get(task_id)
-        if task:
-            return jsonify(task)
-        return {"message": "Task not found"}, 404
+        if task_id in tasks:
+            return {
+                "error": False,
+                "message": "Success",
+                "task": tasks[task_id]
+            }
+        return {"error": True, "message": "Data Tidak Ada"}, 404
 
-    # PUT untuk memperbarui data tugas berdasarkan ID
-    def put(self, task_id):
-        if task_id not in tasks:
-            return {"message": "Task not found"}, 404
+class AddTask(Resource):
+    def post(self):
         data = request.get_json()
-        tasks[task_id].update(data)
-        return jsonify(tasks[task_id])
+        task_id = str(len(tasks) + 1)
+        new_task = {
+            "title": data.get("title"),
+            "description": data.get("description"),
+            "due_date": data.get("due_date"),
+            "status": data.get("status"),
+            "priority": data.get("priority")
+        }
+        tasks[task_id] = new_task
+        return {
+            "error": False,
+            "message": "Tugas berhasil ditambahkan",
+            "task": new_task
+        }, 201
 
-    # DELETE untuk menghapus data tugas berdasarkan ID
+class UpdateTask(Resource):
+    def put(self, task_id):
+        if task_id in tasks:
+            data = request.get_json()
+            task = tasks[task_id]
+            task["title"] = data.get("title", task["title"])
+            task["description"] = data.get("description", task["description"])
+            task["due_date"] = data.get("due_date", task["due_date"])
+            task["status"] = data.get("status", task["status"])
+            task["priority"] = data.get("priority", task["priority"])
+            return {
+                "error": False,
+                "message": "Tugas Berhasil di Update",
+                "task": task
+            }
+        return {"error": True, "message": "Task not found"}, 404
+
+class DeleteTask(Resource):
     def delete(self, task_id):
         if task_id in tasks:
             deleted_task = tasks.pop(task_id)
-            return {"message": "Task deleted successfully", "task": deleted_task}
-        return {"message": "Task not found"}, 404
+            return {
+                "error": False,
+                "message": "Task deleted successfully",
+                "task": deleted_task
+            }
+        return {"error": True, "message": "Tugas Tidak ditemukan"}, 404
 
-# Endpoint untuk mengambil semua tugas dan menambahkan tugas baru
-class TaskList(Resource):
-    # GET untuk mengambil semua tugas
-    def get(self):
-        return jsonify(tasks)
+# Menambahkan endpoint API
+api.add_resource(TaskList, '/tasks')
+api.add_resource(TaskDetail, '/tasks/<string:task_id>')
+api.add_resource(AddTask, '/tasks/add')
+api.add_resource(UpdateTask, '/tasks/update/<string:task_id>')
+api.add_resource(DeleteTask, '/tasks/delete/<string:task_id>')
 
-    # POST untuk menambahkan tugas baru
-    def post(self):
-        data = request.get_json()
-        new_id = str(len(tasks) + 1)
-        tasks[new_id] = {
-            "title": data["title"],
-            "description": data["description"],
-            "status": data["status"],
-            "due_date": data["due_date"]
-        }
-        return jsonify(tasks[new_id]), 201
-
-# Menambahkan resource ke dalam API
-api.add_resource(TaskList, '/tasks')       # Endpoint untuk semua tugas
-api.add_resource(Task, '/tasks/<task_id>') # Endpoint untuk tugas tertentu
-
-# Menjalankan server
 if __name__ == '__main__':
     app.run(debug=True)
